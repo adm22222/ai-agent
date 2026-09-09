@@ -1,3 +1,4 @@
+import json
 import os
 import argparse
 
@@ -5,7 +6,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 from prompts import system_prompt
-
+from call_function import available_functions
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="AI Code Assistant")
@@ -34,6 +35,7 @@ def generate_content(client: OpenAI, messages: list, args: argparse.Namespace) -
         model="openrouter/free",
         messages=messages,
         temperature=0,
+        tools=available_functions
     )
     if not response.usage:
         raise RuntimeError("API response appears to be malformed")
@@ -42,8 +44,18 @@ def generate_content(client: OpenAI, messages: list, args: argparse.Namespace) -
         print("User prompt:", args.user_prompt)
         print("Prompt tokens:", response.usage.prompt_tokens)
         print("Response tokens:", response.usage.completion_tokens)
-    print("Response:")
-    print(response.choices[0].message.content)
+    
+    message = response.choices[0].message
+    if message.tool_calls:
+        print("Function calls:")
+        for tool in message.tool_calls:
+            if tool.type != "function":
+                continue
+            fun_args = json.loads(tool.function.arguments or "{}")
+            print(f"Calling function: {tool.function.name}({fun_args})")
+    else:
+        print("Response:")
+        print(message.content)
 
 
 if __name__ == "__main__":
