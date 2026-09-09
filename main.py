@@ -34,7 +34,6 @@ def generate_content(client: OpenAI, messages: list, args: argparse.Namespace) -
     response = client.chat.completions.create(
         model="openrouter/free",
         messages=messages,
-        temperature=0,
         tools=available_functions
     )
     if not response.usage:
