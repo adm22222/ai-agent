@@ -1,4 +1,3 @@
-import json
 import os
 import argparse
 
@@ -7,6 +6,7 @@ from openai import OpenAI
 
 from prompts import system_prompt
 from call_function import available_functions
+from functions.call_function import call_function
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="AI Code Assistant")
@@ -34,6 +34,7 @@ def generate_content(client: OpenAI, messages: list, args: argparse.Namespace) -
     response = client.chat.completions.create(
         model="openrouter/free",
         messages=messages,
+        temperature=0,
         tools=available_functions
     )
     if not response.usage:
@@ -50,8 +51,14 @@ def generate_content(client: OpenAI, messages: list, args: argparse.Namespace) -
         for tool in message.tool_calls:
             if tool.type != "function":
                 continue
-            fun_args = json.loads(tool.function.arguments or "{}")
-            print(f"Calling function: {tool.function.name}({fun_args})")
+            result_message = call_function(tool, args.verbose)
+
+            if not result_message["content"]:
+                raise RuntimeError("Function call returned empty content")
+
+            if args.verbose:
+                print(f"-> {result_message['content']}")
+
     else:
         print("Response:")
         print(message.content)
